@@ -5,9 +5,9 @@ windowsNTFSVBR = {0: ['E8 52 90 ',
                   2: ['00 02 ',
                       'Bytes per sector (512 = 0x0200)\nThis section also marks the start of the Bios Parameter Block'
                       'which ends right before the Bootstrap code starts.'],
-                  3: ['08',
+                  3: ['08 ',
                       'Sectors per cluster (0x08)'],
-                  4: [' 00 00\n00 00 00 00 00 ',
+                  4: ['00 00\n00 00 00 00 00 ',
                       'Must be zeros to distinguish NTFS from FAT. The two first bytes are considered reserved.'
                       'The next three bytes are always zero and the last two are unused.'],
                   5: ['F8 ',
@@ -75,122 +75,344 @@ windowsNTFSVBR = {0: ['E8 52 90 ',
 windowsNTFSVBRInfo = '''Volume Boot Record - VBR
 '''
 
-windowsNTFSMFT = {1: ['46 49 4C 45 ',
-                      'Signature. It must be "FILE".'],
-                  2: ['30 00 ',
-                      ''],
-                  3: ['03 00 ',
-                      ''],
-                  4: ['FA 6A 32 61 00 00 00 00\n',
-                      ''],
-                  5: ['01 00 ',
-                      ''],
-                  6: ['01 00 ',
-                      ''],
-                  7: ['38 00 ',
-                      ''],
-                  8: ['01 00 ',
-                      ''],
-                  9: ['B0 01 00 00 ',
-                      ''],
-                  10: ['00 04 00 00\n',
-                       ''],
-                  11: ['00 00 00 00 00 00 00 00 ',
-                       ''],
-                  12: ['07 00 ',
-                       ''],
-                  13: ['00 00 ',
-                       'N/A ???'],
-                  14: ['00 00 00 00\n',
-                       'ID of this record.'],
-                  15: ['F2 00 ',
-                       'Update Sequence number'],
-                  16: ['00 00 00 00 ',
-                       'Update Sequence Array.'],
-                  17: ['00 00 ',
-                       'N/A???'],
-                  18: ['10 00 00 00 ',
-                       'Attribute $10\n\nAttribute Type.\nThis marks the beginning of Attribute $10. (Make Attribut $30 header for each thing until next $?'],
-                  19: ['60 00 00 00\n',
-                       'Attribute $10\n\nAttribute Length (including header)'],
-                  20: ['00 ',
-                       'Attribute $10\n\nNon-resident flag'],
-                  21: ['00 ',
-                       'Attribute $10\n\nName length'],
-                  22: ['18 00 ',
-                       'Attribute $10\n\nName offset'],
-                  23: ['00 00 ',
-                       'Attribute $10\n\nFlags: compressed, encrypted, sparse.'],
-                  24: ['00 00 ',
-                       'Attribute $10\n\nAttribute ID'],
-                  25: ['48 00 00 00 ',
-                       'Attribute $10\n\nLength of the attribute'],
-                  26: ['18 00 ',
-                       'Attribute $10\n\nOffset to the attribute data.'],
-                  27: ['00 ',
-                       'Attribute $10\n\nIndexed flag'],
-                  28: ['00\n',
-                       'Attribute $10\n\nPadding'],
-                  29: ['09 C1 A7 DE D5 AC D5 01 ',
-                       'Attribute $10 - $STANDARD_INFORMATION\n'
-                       'File Created (UTC). Add the calculations here.'],
-                  30: ['09 C1 A7 DE D5 AC D5 01\n',
-                       'Attribute $10 - $STANDARD_INFORMATION\n'
-                       'File Modified (UTC)'],
-                  31: ['09 C1 A7 DE D5 AC D5 01 ',
-                       'Attribute $10 - $STANDARD_INFORMATION\n'
-                       'Record Changed (UTC)'],
-                  32: ['09 C1 A7 DE D5 AC D5 01\n',
-                       'Attribute $10 - $STANDARD_INFORMATION\n'
-                       'Last Time Accessed (UTC)'],
-                  33: ['06 00 00 00 ',
-                       'Attribute $10 - $STANDARD_INFORMATION\n'
-                       'File Permissions: Read only, hidden, system, archive, device, normal, temporary, sparse file,'
-                       'reparse point, compressed, offline, not content indexed, encrypted.'],
-                  34: ['',
-                       'Attribute $10 - $STANDARD_INFORMATION\n'],
-                  35: ['',
-                       'Attribute $10 - $STANDARD_INFORMATION\n'],
-                  36: ['',
-                       'Attribute $10 - $STANDARD_INFORMATION\n'],
-                  37: ['',
-                       ''],
-                  38: ['',
-                       ''],
-                  39: ['',
-                       ''],
-                  40: ['',
-                       ''],
-                  41: ['',
-                       '']
-                  }
+windowsNTFSMFTFileRecord = {1: ['46 49 4C 45 ',
+                                'Signature. It must be "FILE".'],
+                            2: ['30 00 ',
+                                'Offset to the update sequence.'],
+                            3: ['03 00 ',
+                                'Update sequence size in words.'],
+                            4: ['FA 6A 32 61 00 00 00 00\n',
+                                '$LogFile Sequence Number (LSN).'],
+                            5: ['01 00 ',
+                                'Sequence Number.'],
+                            6: ['01 00 ',
+                                'Hard link count'],
+                            7: ['38 00 ',
+                                'Offset to the first attribute.'],
+                            8: ['01 00 ',
+                                'Flags: In use, Directory. Here, the "directory flag" flag is set.'],
+                            9: ['B0 01 00 00 ',
+                                'Real size of the FILE record.'],
+                            10: ['00 04 00 00\n',
+                                 'Allocated size of the FILE record.'],
+                            11: ['00 00 00 00 00 00 00 00 ',
+                                 'Base FILE record.'],
+                            12: ['07 00 ',
+                                 'Next attribute ID.'],
+                            13: ['00 00 ',
+                                 'N/A ???, or part of the previous - Next Attribute ID?'],
+                            14: ['00 00 00 00\n',
+                                 'ID of this record.'],
+                            15: ['F2 00 ',
+                                 'Update Sequence number'],
+                            16: ['00 00 00 00 ',
+                                 'Update Sequence Array.'],
+                            17: ['00 00 ',
+                                 'N/A???'],
+                            18: ['10 00 00 00 ',
+                                 'Attribute $10\n'
+                                 'Attribute Type.\n'],
+                            19: ['60 00 00 00\n',
+                                 'Attribute $10\n'
+                                 'Attribute Length (including header)'],
+                            20: ['00 ',
+                                 'Attribute $10\n'
+                                 'Non-resident flag'],
+                            21: ['00 ',
+                                 'Attribute $10\n'
+                                 'Name length'],
+                            22: ['18 00 ',
+                                 'Attribute $10\n'
+                                 'Name offset'],
+                            23: ['00 00 ',
+                                 'Attribute $10\n'
+                                 'Flags: compressed, encrypted, sparse.'],
+                            24: ['00 00 ',
+                                 'Attribute $10\n'
+                                 'Attribute ID'],
+                            25: ['48 00 00 00 ',
+                                 'Attribute $10\n'
+                                 'Length of the attribute'],
+                            26: ['18 00 ',
+                                 'Attribute $10\n'
+                                 'Offset to the attribute data.'],
+                            27: ['00 ',
+                                 'Attribute $10\n'
+                                 'Indexed flag'],
+                            28: ['00\n',
+                                 'Attribute $10\n'
+                                 'Padding'],
+                            29: ['09 C1 A7 DE D5 AC D5 01 ',
+                                 'Attribute $10 - $STANDARD_INFORMATION\n'
+                                 'File Created (UTC). Add the calculations here.'],
+                            30: ['09 C1 A7 DE D5 AC D5 01\n',
+                                 'Attribute $10 - $STANDARD_INFORMATION\n'
+                                 'File Modified (UTC)'],
+                            31: ['09 C1 A7 DE D5 AC D5 01 ',
+                                 'Attribute $10 - $STANDARD_INFORMATION\n'
+                                 'Record Changed (UTC)'],
+                            32: ['09 C1 A7 DE D5 AC D5 01\n',
+                                 'Attribute $10 - $STANDARD_INFORMATION\n'
+                                 'Last Time Accessed (UTC)'],
+                            33: ['06 00 00 00 ',
+                                 'Attribute $10 - $STANDARD_INFORMATION\n'
+                                 'File Permissions: Read only, hidden, system, archive, device, normal, temporary, '
+                                 'sparse file, '
+                                 'reparse point, compressed, offline, not content indexed, encrypted.'],
+                            34: ['00 00 00 00 ',
+                                 'Attribute $10 - $STANDARD_INFORMATION\n'
+                                 'Maximum number of versions'],
+                            35: ['00 00 00 00 ',
+                                 'Attribute $10 - $STANDARD_INFORMATION\n'
+                                 'Verssion number'],
+                            36: ['00 00 00 00\n',
+                                 'Attribute $10 - $STANDARD_INFORMATION\n'
+                                 'Class ID.'],
+                            37: ['00 00 00 00 ',
+                                 'Attribute $10 - $STANDARD_INFORMATION\n'
+                                 'Owner ID.'],
+                            38: ['00 01 00 00 ',
+                                 'Attribute $10 - $STANDARD_INFORMATION\n'
+                                 'Security ID'],
+                            39: ['00 00 00 00 00 00 00 00\n',
+                                 'Attribute $10 - $STANDARD_INFORMATION\n'
+                                 'Quota charged.'],
+                            40: ['00 00 00 00 00 00 00 00 ',
+                                 'Attribute $10 - $STANDARD_INFORMATION\n'
+                                 'Update Sequence Number'],
+                            41: ['30 00 00 00 ',
+                                 'Attribute $30\n'
+                                 'Attribute type'
+                                 'This marks the beginning of Attribute $30'],
+                            42: ['68 00 00 00\n',
+                                 'Attribute $30\n'
+                                 'Length (including header)'],
+                            43: ['00 ',
+                                 'Attribute $30\nNon-resident flag'],
+                            44: ['00 ',
+                                 'Attribute $30\nName Length'],
+                            45: ['18 00 ',
+                                 'Attribute $30\nName offset'],
+                            46: ['00 00 ',
+                                 'Attribute $30\n'
+                                 'Flags: compressed, encrypted, sparse.'],
+                            47: ['03 00 ',
+                                 'Attribute $30\n'
+                                 'Attribute ID'],
+                            48: ['4a 00 00 00 ',
+                                 'Attribute $30\n'
+                                 'Length of the attribute'],
+                            49: ['18 00 ',
+                                 'Attribute $30\n'
+                                 'Offset to the attribute data.'],
+                            50: ['01 ',
+                                 'Attribute $30\n'
+                                 'Indexed flag.'],
+                            51: ['00\n',
+                                 'Attribute $30\n'
+                                 'Padding'],
+                            52: ['05 00 00 00 00 00 ',
+                                 'Attribute $30 - $FILE_NAME\n'
+                                 'Parent directory file record number'],
+                            53: ['05 00 ',
+                                 'Attribute $30 - $FILE_NAME\n'
+                                 'Parent directory sequence number'],
+                            55: ['09 C1 A7 DE D5 AC D5 01\n',
+                                 'Attribute $30 - $FILE_NAME\n'
+                                 'File Created (UTC)'],
+                            56: ['09 C1 A7 DE D5 AC D5 01 ',
+                                 'Attribute $30 - $FILE_NAME\n'
+                                 'File Modified (UTC)'],
+                            57: ['09 C1 A7 DE D5 AC D5 01\n',
+                                 'Attribute $30 - $FILE_NAME\n'
+                                 'Record Changed (UTC)'],
+                            58: ['09 C1 A7 DE D5 AC D5 01 ',
+                                 'Attribute $30 - $FILE_NAME\n'
+                                 'Last Access Time (UTC)'],
+                            59: ['00 40 00 00 00 00 00 00\n',
+                                 'Attribute $30 - $FILE_NAME\n'
+                                 'Allocated Size. Value = 16 384'],
+                            60: ['00 40 00 00 00 00 00 00 ',
+                                 'Attribute $30 - $FILE_NAME\n'
+                                 'Real Size. Value = 16 384'],
+                            61: ['06 00 00 00 ',
+                                 'Attribute $30 - $FILE_NAME\n'
+                                 'File attributes: read-only, hidden, system, archive, device, normal, temporary,'
+                                 'sparse file, reparse poine, compressed, offline, not content indexed,'
+                                 'encrypted, directory, index view.'],
+                            62: ['00 00 00 00\n',
+                                 'Attribute $30 - $FILE_NAME\n'
+                                 '(Used by EAs and reparse)'],
+                            63: ['04 ',
+                                 'Attribute $30 - $FILE_NAME\n'
+                                 'File name length.'],
+                            64: ['03 ',
+                                 'Attribute $30 - $FILE_NAME\n'
+                                 'File name namespace'],
+                            65: ['24 00 4D 00 46 00 54 00 ',
+                                 'Attribute $30 - $FILE_NAME\n'
+                                 'File name: Value = "$MFT".'],
+                            66: ['00 00 00 00 00 00\n',
+                                 'Attribute $30\n What does this belong to?'],
+                            67: ['80 00 00 00 ',
+                                 'Attribute $80\n'
+                                 'Attribute type.'],
+                            68: ['60 00 00 00 ',
+                                 'Attribute $80\n'
+                                 'Length (Including Header)'],
+                            69: ['01 ',
+                                 'Attribute $80\n'
+                                 'Non-resident flag'],
+                            70: ['00 ',
+                                 'Attribute $80\n'
+                                 'Name Length.'],
+                            71: ['40 00 ',
+                                 'Attribute $80\n'
+                                 'Name offset.'],
+                            72: ['00 00 ',
+                                 'Attribute $80\n'
+                                 'Flags: compressed, encrypted and parsed.'],
+                            73: ['06 00\n',
+                                 'Attribute $80\n'
+                                 'Attribute ID. Value = 6.'],
+                            74: ['00 00 00 00 00 00 00 00 ',
+                                 'Attribute $80\n'
+                                 'First VCN. Value = 0.'],
+                            75: ['FF 81 01 00 00 00 00 00\n',
+                                 'Attribute $80\n'
+                                 'Last VCN. Value = 98,815.'],
+                            76: ['40 00 ',
+                                 'Attribute $80\n'
+                                 'Data runs offset.'],
+                            77: ['00 00 ',
+                                 'Attribute $80\n'
+                                 'Compression unit size.'],
+                            78: ['00 00 00 00 ',
+                                 'Attribute $80\n'
+                                 'Padding'],
+                            79: ['00 00 20 18 00 00 00 00\n',
+                                 'Attribute $80\n'
+                                 'Allocated size. Value = 404,750,336.'],
+                            80: ['00 00 20 18 00 00 00 00 ',
+                                 'Attribute $80\n'
+                                 'Real Size. Value = 404,750,336.'],
+                            81: ['00 00 20 18 00 00 00 00\n',
+                                 'Attribute $80\n'
+                                 'Initialized size. Value = 404,750,336.'],
+                            82: ['32 ',
+                                 'Attribute $80 - $DATA - Data run\n'
+                                 'Size'],
+                            83: ['00 71 ',
+                                 'Attribute $80 - $DATA - Data run\n'
+                                 'Cluster count. Value = 28,928.'],
+                            84: ['00 00 0C ',
+                                 'Attribute $80 - $DATA - Data run\n'
+                                 'First Cluster. Value = 786,432.'],
 
-'''
-             
-                09 C1 A7 DE D5 AC D5 01
-              00 00 00 00   00 00 00 00 00 00 00 00
-             00 00 00 00 00 01 00 00   00 00 00 00 00 00 00 00
-             00 00 00 00 00 00 00 00   30 00 00 00 68 00 00 00
-             00 00 18 00 00 00 03 00   4A 00 00 00 18 00 01 00
-             05 00 00 00 00 00 05 00   09 C1 A7 DE D5 AC D5 01
-             09 C1 A7 DE D5 AC D5 01   09 C1 A7 DE D5 AC D5 01
-             09 C1 A7 DE D5 AC D5 01   00 40 00 00 00 00 00 00
-             00 40 00 00 00 00 00 00   06 00 00 00 00 00 00 00
-             04 03 24 00 4D 00 46 00   54 00 00 00 00 00 00 00
-             80 00 00 00 60 00 00 00   01 00 40 00 00 00 06 00
-             00 00 00 00 00 00 00 00   FF 81 01 00 00 00 00 00
-             40 00 00 00 00 00 00 00   00 00 20 18 00 00 00 00
-             00 00 20 18 00 00 00 00   00 00 20 18 00 00 00 00
-             32 00 71 00 00 0C 41 42   77 9B B7 00 33 FE 8E 00
-             C3 08 07 43 C0 81 00 F0   D5 C9 00 00 00 00 00 00
-             B0 00 00 00 48 00 00 00   01 00 40 00 00 00 05 00
-             00 00 00 00 00 00 00 00   0D 00 00 00 00 00 00 00
-             40 00 00 00 00 00 00 00   00 E0 00 00 00 00 00 00
-             08 D0 00 00 00 00 00 00   08 D0 00 00 00 00 00 00
-             31 0E 0C 4F 01 00 00 00   FF FF FF FF'''
-windowsNTFSMFTInfo = '''MFT Info'''
-template = {0: ['',
-                ''],
+                            85: ['41 ',
+                                 'Attribute $80 - $DATA - Data run\n'
+                                 'Size'],
+                            86: ['42 ',
+                                 'Attribute $80 - $DATA - Data run\n'
+                                 'Cluster count. Value = 66.'],
+                            87: ['77 9B B7 00 ',
+                                 'Attribute $80 - $DATA - Data run\n'
+                                 'First Cluster. Value = 12,819,319.'],
+
+                            88: ['33 ',
+                                 'Attribute $80 - $DATA - Data run\n'
+                                 'Size'],
+                            89: ['FE 8E 00\n',
+                                 'Attribute $80 - $DATA - Data run\n'
+                                 'Cluster count. Value = 36,606.'],
+                            90: ['C3 08 07 ',
+                                 'Attribute $80 - $DATA - Data run\n'
+                                 'First Cluster. Value = 13,280,314.'],
+
+                            91: ['43 ',
+                                 'Attribute $80 - $DATA - Data run\n'
+                                 'Size'],
+                            92: ['C0 81 00 ',
+                                 'Attribute $80 - $DATA - Data run\n'
+                                 'Cluster count. Value = 33,216.'],
+                            93: ['F0 D5 C9 00 ',
+                                 'Attribute $80 - $DATA - Data run\n'
+                                 'First Cluster. Value = 26,507,818.'],
+                            1131: ['00 00 00 00 00\n',
+                                   'Attribute $80\n'
+                                   'Padding???'],
+                            94: ['B0 00 00 00 ',
+                                 'Attribute $B0\n'
+                                 'Attribute type.'],
+                            95: ['48 00 00 00 ',
+                                 'Attribute $B0\n'
+                                 'Length (including header).'],
+                            96: ['01 ',
+                                 'Attribute $B0\n'
+                                 'Non-resident flag.'],
+                            97: ['00 ',
+                                 'Attribute $B0\n'
+                                 'Name length.'],
+                            98: ['40 00 ',
+                                 'Attribute $B0\n'
+                                 'Name offset.'],
+                            99: ['00 00 ',
+                                 'Attribute $B0\n'
+                                 'Flags: compressed, encrypted, sparse.'],
+                            100: ['05 00\n',
+                                  'Attribute $B0\n'
+                                  'Attribute ID.'],
+                            101: ['00 00 00 00 00 00 00 00 ',
+                                  'Attribute $B0\n'
+                                  'First VCN. Value = 0.'],
+                            102: ['0D 00 00 00 00 00 00 00\n',
+                                  'Attribute $B0\n'
+                                  'Last VCN. Value = 13'],
+                            103: ['40 00 ',
+                                  'Attribute $B0\n'
+                                  'Data runs offset.'],
+                            104: ['00 00 ',
+                                  'Attribute $B0\n'
+                                  'Compression unit size.'],
+                            105: ['00 00 00 00 ',
+                                  'Attribute $B0\n'
+                                  'Padding.'],
+                            106: ['00 E0 00 00 00 00 00 00\n',
+                                  'Attribute $B0\n'
+                                  'Allocated size. Value = 57,344.'],
+                            107: ['08 D0 00 00 00 00 00 00 ',
+                                  'Attribute $B0\n'
+                                  'Real size. Value = 53,256.'],
+                            108: ['08 D0 00 00 00 00 00 00\n',
+                                  'Attribute $B0\n'
+                                  'Initialized size. Value = 53,256.'],
+                            109: ['31 ',
+                                  'Attribute $B0 - $BITMAP - Data run\n'
+                                  'Size.'],
+                            110: ['0E ',
+                                  'Attribute $B0 - $BITMAP - Data run\n'
+                                  'Cluster count. Value = 14'],
+                            111: ['0C 4F 01 ',
+                                  'Attribute $B0 - $BITMAP - Data run\n'
+                                  'First cluster. Value = 85,772.'],
+                            112: ['00 00 00 ',
+                                  'Attribute $B0 - $BITMAP - Data run\n'
+                                  'Padding???'],
+                            113: ['FF FF FF FF',
+                                  'End marker.']
+
+
+
+                            }
+
+windowsNTFSMFTInfo = '''Master File Table (MFT) Info
+Understanding the MFT is crucial to achieve a fully good understanding of NTFS. Every file or direcroty has at least one
+entry in the MFT.
+
+
+https://docs.microsoft.com/en-us/windows/win32/devnotes/master-file-table'''
+
+template = {0: ['', ''],
             1: ['',
                 ''],
             2: ['',
