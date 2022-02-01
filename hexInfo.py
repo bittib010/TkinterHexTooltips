@@ -1,5 +1,4 @@
-windowsNTFSVBR = {0: ['E8 52 90 ',
-                      'Jump code (short jump, offset, NOP: 0xEB 0x52 0x90)'],
+windowsNTFSVBR = {0: ['E8 52 90 ', 'Jump code (short jump, offset, NOP: 0xEB 0x52 0x90)'],
                   1: ['4E 54 46 53 20 20 20 20 ',
                       'OEM name ("NTFS")'],
                   2: ['00 02 ',
@@ -11,7 +10,7 @@ windowsNTFSVBR = {0: ['E8 52 90 ',
                       'Must be zeros to distinguish NTFS from FAT. The two first bytes are considered reserved.'
                       'The next three bytes are always zero and the last two are unused.'],
                   5: ['F8 ',
-                      'Media descriptor (0xF8)'],
+                      'Media descriptor (0xF8). This will most often be 0xF8 which means Harddisk.'],
                   6: ['00 00 ',
                       'Must be zeros.'],
                   7: ['3f 00 ',
@@ -23,7 +22,7 @@ windowsNTFSVBR = {0: ['E8 52 90 ',
                   10: ['00 00 00 00 ',
                        'Must be zeros'],
                   11: ['80 00 80 00 ',
-                       'Signature (0x80 0x00 0x80 0x00).'],
+                       'Signature (0x80 0x00 0x80 0x00). This value indicates an NTFS filesystem.'],
                   12: ['75 8C 24 4A 00 00 00 00\n',
                        'Total sectors in volume.'],
                   13: ['00 00 0C 00 00 00 00 00 ',
@@ -72,11 +71,33 @@ windowsNTFSVBR = {0: ['E8 52 90 ',
                   21: ['55 AA',
                        'Signature (0x55 0xAA).']}
 
-windowsNTFSVBRInfo = '''Volume Boot Record - VBR
-'''
+windowsNTFSVBRInfo = 'Volume Boot Record - VBR \n\n' \
+                     'Let\'s just start with the basics of NTFS. NTFS was introduced in Windows NT in 1993 and is an ' \
+                     'update and extension of the High Performance File System (HPFS) which Microsoft developed for ' \
+                     'OS/2. What is called a Master Boot Record in FAT (File Allocation Table) file systems is called '\
+                     'Volume Boot Record in NTFS. The MFT contains all files and directories, and each one is a ' \
+                     'collection of attributes. The VBR is the beginning of an NTFS partition. NTFS file systems does '\
+                     'have a backup of the boot sector, but different from the backup in FAT32, it is located at the ' \
+                     'end of the partition. This is considered a security mechanism in case of physical damage. The ' \
+                     'closer it is to the original, the higher chance that both become damaged. \n\n' \
+                     'The VBR is basically set up like this:\n' \
+                     '\t- Volume Boot Record\n' \
+                     '\t- MFT Mirror - Only the first four MFT entries.\n' \
+                     '\t- Data Clusters\n' \
+                     '\t- Master File Table (MFT) which is the central thing in NTFS\n' \
+                     '\t- Data Clusters - This is where files and directories are stored.\n' \
+                     '\t- Backup Boot Sector\n' \
+                     '\n The MBR/VBR can directly define up to four partitions on the harddrive, take a look at' \
+                     'the next MFT view for more details on the Bootstrap code for details.' \
+                     ''
 
-windowsNTFSMFTFileRecord = {1: ['46 49 4C 45 ',
-                                'Signature. It must be "FILE".'],
+# TODO: Add another VBR view with more details towards the bootstrap code. This will include like the location
+# of the four direct partitions filesystem for each partition (located at 1C3, 1D3, 1E3 and 1F3)
+# https://tierradatarecovery.co.uk/examining-the-raw-data-on-your-hard-drive-with-a-hex-editor
+# and this list will help determine those values:  https://datarecovery.com/rd/hexadecimal-flags-for-partition-type/
+
+
+windowsNTFSMFTFileRecord = {1: ['46 49 4C 45 ', 'Signature. It must be "FILE".'],
                             2: ['30 00 ',
                                 'Offset to the update sequence.'],
                             3: ['03 00 ',
@@ -400,8 +421,6 @@ windowsNTFSMFTFileRecord = {1: ['46 49 4C 45 ',
                                   'Padding???'],
                             113: ['FF FF FF FF',
                                   'End marker.']
-
-
 
                             }
 
