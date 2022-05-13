@@ -6,7 +6,7 @@ class Main(object):
         self.master = master
 
         dropdownOpts = [
-            "Windows NTFS - VBR",
+            "Windows NTFS - Boot Sector",
             "Windows NTFS - MFT File Record"
         ]
 
@@ -44,7 +44,7 @@ class Main(object):
         def showSelection():
             currentSelection = clicked.get()
             textWidget.delete('1.0', 'end')
-            if currentSelection == "Windows NTFS - VBR":
+            if currentSelection == "Windows NTFS - Boot Sector":
                 iterSelection(hexInfo.windowsNTFSVBR)
                 popupText.delete('1.0', 'end')
                 popupText.insert("1.0", hexInfo.windowsNTFSVBRInfo)
