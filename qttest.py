@@ -1,9 +1,8 @@
 import sys
 import json
-import os
 from PyQt5.QtCore import pyqtSignal
-from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QPushButton, QTextBrowser, QFileDialog, QSpinBox, QLabel, QHBoxLayout, QComboBox
-from PyQt5.QtGui import QTextCharFormat, QColor, QTextCursor, QTextDocument
+from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QPushButton, QTableWidget, QTableWidgetItem, QFileDialog, QSpinBox, QLabel, QHBoxLayout, QComboBox
+from PyQt5.QtGui import QColor
 
 class FileValidator:
     def __init__(self, template_file):
@@ -18,7 +17,9 @@ class FileValidator:
                 data = structure['data']
                 try:
                     hex_data = bytes.fromhex(data)
-                    if file_data.startswith(hex_data) and len(file_data) >= start_index + size:
+                    if start_index < 0:
+                        start_index += len(file_data)
+                    if file_data.startswith(hex_data, start_index) and len(file_data) >= start_index + size:
                         return ext
                 except ValueError:
                     pass
@@ -35,26 +36,11 @@ class FileValidator:
 
                 start_index = structure['index']
                 end_index = start_index + data_size
+                if start_index < 0:
+                    start_index += sequence_length
                 if start_index <= sequence_length <= end_index and sequence.upper() == data:
                     return structure['information']
-
         return ''
-
-
-class InteractiveTextBrowser(QTextBrowser):
-    emit_info_signal = pyqtSignal(str)
-
-    def __init__(self, parent=None):
-        super().__init__(parent)
-
-    def mousePressEvent(self, event):
-        super().mousePressEvent(event)
-        cursor = self.cursorForPosition(event.pos())
-        cursor.select(QTextCursor.WordUnderCursor)
-        selected_text = cursor.selectedText()
-        if selected_text:
-            self.emit_info_signal.emit(selected_text)
-
 
 class HexViewer(QWidget):
     def __init__(self, template_file):
@@ -75,10 +61,14 @@ class HexViewer(QWidget):
 
         hex_ascii_layout = QHBoxLayout()
 
-        self.hex_edit = InteractiveTextBrowser()
+        self.hex_edit = QTableWidget()
+        self.hex_edit.setStyleSheet("QTableWidget { background-color: black; color: green; }")
+        self.hex_edit.itemClicked.connect(self.update_info)
         hex_ascii_layout.addWidget(self.hex_edit)
 
-        self.ascii_edit = InteractiveTextBrowser()
+        self.ascii_edit = QTableWidget()
+        self.ascii_edit.setStyleSheet("QTableWidget { background-color: black; color: green; }")
+        self.ascii_edit.itemClicked.connect(self.update_info)
         hex_ascii_layout.addWidget(self.ascii_edit)
 
         self.layout.addLayout(hex_ascii_layout)
@@ -106,78 +96,66 @@ class HexViewer(QWidget):
 
         self.current_data = None
 
-        self.info_edit = QTextBrowser()
+        self.info_edit = QTableWidget()
+        self.info_edit.setStyleSheet("QTableWidget { color: green; }")
         self.layout.addWidget(self.info_edit)
-
-        self.hex_edit.emit_info_signal.connect(self.update_info)
-        self.ascii_edit.emit_info_signal.connect(self.update_info)
-
-    def add_highlight_structure(self, index, size, information, color):
-        structure = {'index': index, 'size': size, 'information': information, 'color': color}
-        self.highlight_structures.append(structure)
-
-    def highlight_data_structures(self):
-        if self.current_data is not None:
-            hex_data = self.current_data.hex()
-
-            cursor = self.hex_edit.textCursor()
-
-            for structure in self.highlight_structures:
-                start_index = structure['index'] * 3
-                size = structure['size'] * 3
-
-                if start_index + size > len(hex_data):
-                    continue
-
-                hex_format = QTextCharFormat()
-                hex_format.setBackground(QColor(structure['color']))
-
-                cursor.setPosition(start_index)
-                cursor.movePosition(QTextCursor.NextCharacter, QTextCursor.KeepAnchor, size)
-
-                cursor.setCharFormat(hex_format)
-
-    def update_info(self, selected_text):
-        if self.current_data is not None:
-            hex_sequence = ''.join(selected_text.split())  # Remove spaces from the clicked sequence
-            sequence_length = len(hex_sequence) // 2  # Calculate the sequence length in bytes
-
-            for file_type, structures in self.validator.file_templates.items():
-                for structure in structures:
-                    data = ''.join(structure['data'].split())  # Remove spaces from the template data
-                    data_size = len(data) // 2  # Calculate the structure's data size in bytes
-
-                    # Calculate the byte index and check if it is within the structure's range
-                    start_index = structure['index']
-                    end_index = start_index + data_size
-                    if start_index <= sequence_length <= end_index and hex_sequence.upper() == data:
-                        self.info_edit.setPlainText(structure['information'])
-                        return
-            self.info_edit.setPlainText('')
-
 
     def update_display(self):
         if self.current_data is not None:
-            
             encoding = self.encoding_input.currentText()
             line_length = self.line_length_input.value()
 
             hex_data = self.current_data.hex()
-            hex_width = line_length * 3
-            formatted_hex_data = ' '.join([hex_data[i:i+2] for i in range(0, len(hex_data), 2)])
-            formatted_hex_data = '\n'.join([formatted_hex_data[i:i+hex_width] for i in range(0, len(formatted_hex_data), hex_width)])
-            self.hex_edit.setPlainText(formatted_hex_data)
+            hex_items = [hex_data[i:i+2] for i in range(0, len(hex_data), 2)]
+
+            self.hex_edit.setRowCount((len(hex_items) + line_length - 1) // line_length)
+            self.hex_edit.setColumnCount(line_length)
+
+            for i in range(line_length):
+                self.hex_edit.setColumnWidth(i, 2)  # Adjust as needed
+
+            for i, item in enumerate(hex_items):
+                self.hex_edit.setItem(i // line_length, i % line_length, QTableWidgetItem(item))
 
             try:
                 ascii_data = self.current_data.decode(encoding)
                 printable_ascii_data = ''.join(c if 32 <= ord(c) < 127 else '.' for c in ascii_data)
-                ascii_width = line_length
-                formatted_ascii_data = '\n'.join([printable_ascii_data[i:i+ascii_width] for i in range(0, len(printable_ascii_data), ascii_width)])
-            except UnicodeDecodeError:
-                formatted_ascii_data = '(cannot decode with encoding {})'.format(encoding)
-            self.ascii_edit.setPlainText(formatted_ascii_data)
+                ascii_items = [printable_ascii_data[i:i+1] for i in range(0, len(printable_ascii_data), 1)]
 
-            self.highlight_data_structures()
+                self.ascii_edit.setRowCount((len(ascii_items) + line_length - 1) // line_length)
+                self.ascii_edit.setColumnCount(line_length)
+                for i in range(len(ascii_items)):
+                    self.ascii_edit.setColumnWidth(i, 5)  # Adjust as needed
+
+                for i, item in enumerate(ascii_items):
+                    self.ascii_edit.setItem(i // line_length, i % line_length, QTableWidgetItem(item))
+            except UnicodeDecodeError:
+                self.ascii_edit.setRowCount(1)
+                self.ascii_edit.setColumnCount(1)
+                self.ascii_edit.setItem(0, 0, QTableWidgetItem('(cannot decode with encoding {})'.format(encoding)))
+
+    def update_info(self, clicked_item):
+        if self.current_data is not None:
+            hex_sequence = clicked_item.text()
+            sequence_length = len(hex_sequence) // 2
+
+            for file_type, structures in self.validator.file_templates.items():
+                for structure in structures:
+                    data = ''.join(structure['data'].split())
+                    data_size = len(data) // 2
+
+                    start_index = structure['index']
+                    end_index = start_index + data_size
+                    if start_index < 0:
+                        start_index += sequence_length
+                    if start_index <= sequence_length <= end_index and hex_sequence.upper() == data:
+                        self.info_edit.setRowCount(1)
+                        self.info_edit.setColumnCount(1)
+                        self.info_edit.setItem(0, 0, QTableWidgetItem(structure['information']))
+                        return
+            self.info_edit.setRowCount(1)
+            self.info_edit.setColumnCount(1)
+            self.info_edit.setItem(0, 0, QTableWidgetItem(''))
 
     def load_file(self):
         options = QFileDialog.Options()
@@ -189,21 +167,25 @@ class HexViewer(QWidget):
 
             file_type = self.validator.get_file_type(self.current_data)
             if file_type is None:
-                self.hex_edit.setPlainText("File type mismatch.")
-                self.ascii_edit.setPlainText("File type mismatch.")
-                self.info_edit.setPlainText("No Information Available")
+                self.hex_edit.setRowCount(1)
+                self.hex_edit.setColumnCount(1)
+                self.hex_edit.setItem(0, 0, QTableWidgetItem("File type mismatch."))
+
+                self.ascii_edit.setRowCount(1)
+                self.ascii_edit.setColumnCount(1)
+                self.ascii_edit.setItem(0, 0, QTableWidgetItem("File type mismatch."))
+
+                self.info_edit.setRowCount(1)
+                self.info_edit.setColumnCount(1)
+                self.info_edit.setItem(0, 0                , QTableWidgetItem("No Information Available"))
                 return
             else:
                 self.highlight_structures = self.validator.file_templates[file_type]
 
         self.update_display()
-        self.hex_edit.moveCursor(QTextCursor.Start)
-        self.ascii_edit.moveCursor(QTextCursor.Start)
-
 
 def main():
     app = QApplication(sys.argv)
-
     template_file = "file_templates.json"
     viewer = HexViewer(template_file)
     viewer.show()
