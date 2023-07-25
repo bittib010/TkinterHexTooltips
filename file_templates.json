@@ -1,0 +1,35 @@
+{
+    "jpg": [
+      {
+        "index": 0,
+        "size": 2,
+        "data": "FFD8",
+        "information": "JPG Header",
+        "color": "#FFFF00"
+      },
+      {
+        "index": 3,
+        "size": 12,
+        "data": "FFD8",
+        "information": "JPG asasdads",
+        "color": "#FFFF00"
+      },
+      {
+        "index": -2,
+        "size": 2,
+        "data": "FFD9",
+        "information": "JPG Footer",
+        "color": "#33FF00"
+      }
+    ],
+    "png": [
+      {
+        "index": 0,
+        "size": 3,
+        "data": "89504E47",
+        "information": "PNG Header",
+        "color": "#FF00FF"
+      }
+    ]
+  }
+  

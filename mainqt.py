@@ -3,8 +3,6 @@ from PyQt5.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QHBoxLayout,
 from PyQt5.QtGui import QTextCharFormat, QColor, QFont, QTextCursor
 from PyQt5.QtCore import Qt
 import hexInfo
-from PyQt5 import *
-
 
 OPTIONS_INFO = {
     "Windows NTFS - Boot Sector": (hexInfo.windowsNTFSVBR, hexInfo.windowsNTFSVBRInfo),
@@ -30,7 +28,6 @@ class CustomPlainTextEdit(QPlainTextEdit):
         self.setTextCursor(cursor)
         self.window().updatePopupText(True)
 
-
 class HexViewer(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -45,15 +42,12 @@ class HexViewer(QMainWindow):
         # Setup widgets
         self.combobox.addItems(OPTIONS_INFO.keys())
         self.textWidget.setReadOnly(True)
-        self.textWidget.setFont(QFont("Monospace", 12))  # Set font to Courier with size 10
+        self.textWidget.setFont(QFont("Courier", 10))  # Set font to Courier with size 10
         self.asciiWidget.setReadOnly(True)
-        self.asciiWidget.setFont(QFont("Monospace", 10))  # Set font to Courier with size 10
+        self.asciiWidget.setFont(QFont("Courier", 10))  # Set font to Courier with size 10
         self.popupText.setReadOnly(True)
         self.byteWidthBox.setValue(16)
         self.byteWidthBox.valueChanged.connect(self.showSelection)
-
-        # Setup widgets
-        self.combobox.addItems(OPTIONS_INFO.keys())
 
         # Connect signals
         self.combobox.currentTextChanged.connect(self.showSelection)
@@ -74,7 +68,7 @@ class HexViewer(QMainWindow):
         central_widget.setLayout(vbox)
 
         self.setCentralWidget(central_widget)
-        self.setGeometry(0, 70, 6000, 6000)
+        self.setGeometry(500, 50, 900, 900)
         self.setWindowTitle("Poppetypop")
 
     def showSelection(self, *args):
@@ -87,18 +81,15 @@ class HexViewer(QMainWindow):
         asciiCursor = self.asciiWidget.textCursor()
         format = QTextCharFormat()
 
-        hexBytes = []
-        asciiBytes = []
         for key, value in OPTIONS_INFO[currentSelection][0].items():
-            hexBytes.extend(value[0].split())
-            asciiBytes.extend([chr(int(b, 16)) if 32 <= int(b, 16) <= 126 else '.' for b in value[0].split()])
-
-        for i in range(0, len(hexBytes), self.byteWidthBox.value()):
-            format.setBackground(QColor("white"))
-            cursor.insertText(' '.join(hexBytes[i:i+self.byteWidthBox.value()]), format)
-            cursor.insertText('\n')
-            asciiCursor.insertText(''.join(asciiBytes[i:i+self.byteWidthBox.value()]), format)
-            asciiCursor.insertText('\n')
+            hexBytes = value[0].split()
+            asciiBytes = [''.join(chr(int(b, 16)) if 32 <= int(b, 16) <= 126 else '.' for b in hexBytes[i:i+self.byteWidthBox.value()]) for i in range(0, len(hexBytes), self.byteWidthBox.value())]
+            for i in range(0, len(hexBytes), self.byteWidthBox.value()):
+                format.setBackground(QColor("white"))
+                cursor.insertText(' '.join(hexBytes[i:i+self.byteWidthBox.value()]), format)
+                cursor.insertText('\n')
+                asciiCursor.insertText(asciiBytes[i // self.byteWidthBox.value()], format)
+                asciiCursor.insertText('\n')
 
         self.popupText.setPlainText(OPTIONS_INFO[currentSelection][1])
 
@@ -120,4 +111,3 @@ if __name__ == "__main__":
     window = HexViewer()
     window.show()
     app.exec_()
-
