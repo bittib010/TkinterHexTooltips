@@ -2,6 +2,8 @@ import sys
 from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QPushButton, QTableWidget, QTableWidgetItem, QFileDialog, QSpinBox, QLabel, QHBoxLayout, QComboBox, QStatusBar
 from PyQt5.QtGui import QFont
 from PyQt5.QtCore import QTimer
+from PyQt5.QtCore import QTimer, Qt
+
 
 class HexViewer(QMainWindow):
     def __init__(self):
@@ -49,6 +51,10 @@ class HexViewer(QMainWindow):
         line_length_layout.addWidget(QLabel('Line length:'))
         line_length_layout.addWidget(self.line_length_input)
         self.layout.addLayout(line_length_layout)
+
+        self.hex_edit.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.ascii_edit.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+
 
         self.encoding_input = QComboBox()
         self.encoding_input.addItems(['iso-8859-1', 'utf-8', 'ascii', 'cp1252', 'utf-16', 'utf-32'])
