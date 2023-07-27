@@ -37,6 +37,11 @@ class HexViewer(QMainWindow):
         hex_ascii_layout.addWidget(self.ascii_edit)
 
 
+        # Set tables as non editable
+        self.hex_edit.setEditTriggers(QTableWidget.NoEditTriggers)
+        self.ascii_edit.setEditTriggers(QTableWidget.NoEditTriggers)
+
+
         # Vertical alignment of scrollars
         self.scrollbar = QScrollBar(Qt.Vertical, self.central_widget)
         self.scrollbar.valueChanged.connect(self.hex_edit.verticalScrollBar().setValue)
@@ -164,7 +169,14 @@ class HexViewer(QMainWindow):
         print (self.hex_edit.rowCount(), self.ascii_edit.rowCount())
         self.scrollbar.setRange(0, max_rows)
 
+    def set_cell_background_color(self, row, column, color):
+        hex_item = self.hex_edit.item(row, column)
+        ascii_item = self.ascii_edit.item(row, column)
 
+        if hex_item is not None:
+            hex_item.setBackground(color)
+        if ascii_item is not None:
+            ascii_item.setBackground(color)
 
     def load_file(self):
         options = QFileDialog.Options()
@@ -181,6 +193,14 @@ class HexViewer(QMainWindow):
         ascii_row_label = self.ascii_edit.verticalHeaderItem(row).text()
         ascii_header_text = self.ascii_edit.horizontalHeaderItem(column).text()
         ascii_cell = self.ascii_edit.item(row, column).text()
+
+        # Get the background color of the clicked cell
+        # TODO: Remove from here - just for demonstrational purposes
+        bg_color = self.hex_edit.item(row, column).background().color()
+
+        # Set the background color to red if it is not already red
+        if bg_color != Qt.red:
+            self.set_cell_background_color(row, column, Qt.red)
 
 
 
