@@ -1,7 +1,6 @@
 import sys
-from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QPushButton, QTableWidget, QTableWidgetItem, QFileDialog, QSpinBox, QLabel, QHBoxLayout, QComboBox, QStatusBar
+from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QPushButton, QTableWidget, QTableWidgetItem, QFileDialog, QSpinBox, QLabel, QHBoxLayout, QComboBox, QStatusBar, QScrollBar
 from PyQt5.QtGui import QFont
-from PyQt5.QtCore import QTimer
 from PyQt5.QtCore import QTimer, Qt
 
 
@@ -16,7 +15,6 @@ class HexViewer(QMainWindow):
         self.setWindowTitle('Hex Viewer')
         self.showMaximized()
 
-
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
 
@@ -26,22 +24,45 @@ class HexViewer(QMainWindow):
         hex_ascii_layout = QHBoxLayout()
 
         self.hex_edit = QTableWidget()
-        self.hex_edit.setStyleSheet("QTableWidget { background-color: black; color: green; }")
+
+        self.hex_edit.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.hex_edit.setStyleSheet("QTableWidget { background-color: black; color: green; font: bold 35px; }")
         self.hex_edit.cellClicked.connect(self.on_cell_clicked)
         hex_ascii_layout.addWidget(self.hex_edit)
 
         self.ascii_edit = QTableWidget()
-        self.ascii_edit.setStyleSheet("QTableWidget { background-color: black; color: green; }")
+        self.ascii_edit.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.ascii_edit.setStyleSheet("QTableWidget { background-color: black; color: green; font: bold 35px;}")
         self.ascii_edit.cellClicked.connect(self.on_cell_clicked)
         hex_ascii_layout.addWidget(self.ascii_edit)
 
-        self.hex_edit.setColumnCount(16)
-        self.hex_edit.setHorizontalHeaderLabels([f"{i:02X}" for i in range(16)])
 
-        self.ascii_edit.setColumnCount(16)
-        self.ascii_edit.setHorizontalHeaderLabels([f"{i:02X}" for i in range(16)])
+        # Vertical alignment of scrollars
+        self.scrollbar = QScrollBar(Qt.Vertical, self.central_widget)
+        self.scrollbar.valueChanged.connect(self.hex_edit.verticalScrollBar().setValue)
+        self.scrollbar.valueChanged.connect(self.ascii_edit.verticalScrollBar().setValue)
+        self.hex_edit.verticalScrollBar().valueChanged.connect(self.scrollbar.setValue)
+        self.ascii_edit.verticalScrollBar().valueChanged.connect(self.scrollbar.setValue)
+        self.hex_edit.verticalScrollBar().rangeChanged.connect(self.update_scrollbar_range)
+        self.ascii_edit.verticalScrollBar().rangeChanged.connect(self.update_scrollbar_range)
+
+        hex_ascii_layout.addWidget(self.scrollbar)
+        self.scrollbar.setVisible(False)
+
+
+        # Horizontal alignment of scrollars. currently colliding ith vertical logic
+        """ self.scrollbar = QScrollBar(Qt.Horizontal, self.central_widget)
+        self.scrollbar.valueChanged.connect(self.hex_edit.horizontalScrollBar().setValue)
+        self.scrollbar.valueChanged.connect(self.ascii_edit.horizontalScrollBar().setValue)
+        self.hex_edit.horizontalScrollBar().valueChanged.connect(self.scrollbar.setValue)
+        self.ascii_edit.horizontalScrollBar().valueChanged.connect(self.scrollbar.setValue)
+        self.hex_edit.horizontalScrollBar().rangeChanged.connect(self.update_scrollbar_range)
+        self.ascii_edit.horizontalScrollBar().rangeChanged.connect(self.update_scrollbar_range)
+        hex_ascii_layout.addWidget(self.scrollbar)
+        self.scrollbar.setVisible(False) """
 
         self.layout.addLayout(hex_ascii_layout)
+
 
         self.line_length_input = QSpinBox()
         self.line_length_input.setMinimum(1)
@@ -51,6 +72,12 @@ class HexViewer(QMainWindow):
         line_length_layout.addWidget(QLabel('Line length:'))
         line_length_layout.addWidget(self.line_length_input)
         self.layout.addLayout(line_length_layout)
+
+        self.hex_edit.setColumnCount(16)
+        self.hex_edit.setHorizontalHeaderLabels([f"{i:02X}" for i in range(16)])
+
+        self.ascii_edit.setColumnCount(16)
+        self.ascii_edit.setHorizontalHeaderLabels([f"{i:02X}" for i in range(16)])
 
         self.hex_edit.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.ascii_edit.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
@@ -121,7 +148,7 @@ class HexViewer(QMainWindow):
                     self.ascii_edit.setColumnCount(line_length)
                     for i in range(len(ascii_items)):
                         self.ascii_edit.setColumnWidth(i, 2)  # Adjust as needed
-                        self.hex_edit.setRowHeight(i, 2)
+                        self.ascii_edit.setRowHeight(i, 2)
                     for i, item in enumerate(ascii_items):
                         self.ascii_edit.setItem(i // line_length, i % line_length, QTableWidgetItem(item))
                 except UnicodeDecodeError:
@@ -130,6 +157,14 @@ class HexViewer(QMainWindow):
                     self.ascii_edit.setItem(0, 0, QTableWidgetItem('(cannot decode with encoding {})'.format(encoding)))
 
             self.update_row_labels()
+
+    def update_scrollbar_range(self):
+        
+        max_rows = max(self.hex_edit.rowCount(), self.ascii_edit.rowCount())
+        print (self.hex_edit.rowCount(), self.ascii_edit.rowCount())
+        self.scrollbar.setRange(0, max_rows)
+
+
 
     def load_file(self):
         options = QFileDialog.Options()
