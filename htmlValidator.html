@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html>
+<body>
+
+<input type="file" id="inputFile">
+<div id="container">
+  <div id="hexOutput"></div>
+  <div id="infoBox"></div>
+</div>
+
+<style>
+  #container {
+    display: flex;
+  }
+  #hexOutput {
+    flex-grow: 1;
+  }
+  #infoBox {
+    width: 200px;
+    height: 300px;
+    border: 1px solid black;
+    margin-left: 10px;
+    padding: 10px;
+    overflow: auto;
+  }
+  td {
+    width: 16px;
+    word-wrap: break-word;
+  }
+  .highlight {
+    background-color: yellow;
+  }
+</style>
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+<script>
+let fileInput = document.getElementById('inputFile');
+let hexOutput = document.getElementById('hexOutput');
+let infoBox = document.getElementById('infoBox');
+
+let fileInfo = {
+  "SQLiteDatabase": {
+    "header": {
+      "index": 0,
+      "size": 16,
+      "information": "The header string: \"SQLite format 3\\000\". This is the magic string that identifies the file as a valid SQLite database file."
+    },
+    "pageSizeBytes": {
+      "index": 17,
+      "size": 2,
+      "information": "The database page size in bytes. Must be a power of two between 512 and 32768 inclusive, or the value 1 representing a page size of 65536. The size of the database pages affects the performance and storage efficiency of the database. The default page size is 4096 bytes."
+    },
+    "writeVersion": {
+      "index": 19,
+      "size": 1,
+      "information": "File format write version. 1 for legacy; 2 for Write-Ahead Logging (WAL). The write version indicates the version of the database file format. Legacy mode (write version 1) uses rollback journal mode for transactions, while Write-Ahead Logging mode (write version 2) uses a log file for transactions, which provides better concurrency and crash recovery capabilities."
+    },
+    "fileChangeCounter": {
+      "index": 24,
+      "size": 4,
+      "information": "The file change counter is a 32-bit unsigned integer at offset 24 that is incremented whenever the database file changes. It is used by some VFS (Virtual File System) to cache the file's content. It helps in detecting when the database file has changed since it was last accessed."
+    },
+    "databaseSizePages": {
+      "index": 28,
+      "size": 4,
+      "information": "The size of the database file in pages. It is a 32-bit unsigned integer at offset 28. The database file size in bytes can be calculated by multiplying this value by the page size."
+    },
+    "firstFreelistTrunk": {
+      "index": 32,
+      "size": 4,
+      "information": "The page number of the first freelist trunk page. A freelist trunk page is the head of a linked list of free pages that can be reused for new content. This is a 32-bit unsigned integer at offset 32. If the database has no free pages, the value will be 0."
+    },
+    "totalFreelistPages": {
+      "index": 36,
+      "size": 4,
+      "information": "The total number of freelist pages. A freelist page is used to store a list of other free pages in the database. This is a 32-bit unsigned integer at offset 36. If there are no free pages, the value will be 0."
+    },
+    "schemaCookie": {
+      "index": 40,
+      "size": 4,
+      "information": "The schema cookie is a 32-bit unsigned integer at offset 40. It is incremented whenever the database schema changes. The schema cookie is used by clients to determine if their cached schema is still valid."
+    },
+    "schemaFormatNumber": {
+      "index": 44,
+      "size": 4,
+      "information": "The schema format number is a 32-bit unsigned integer at offset 44. It is used to determine the format of the database schema. The format number is incremented whenever the database schema changes."
+    },
+    "defaultPageCacheSize": {
+      "index": 47,
+      "size": 4,
+      "information": "The default page cache size is a 32-bit signed integer at offset 47. This value represents the suggested maximum number of pages in the page cache. A page cache is a cache that holds frequently accessed pages in memory to improve database performance."
+    }
+  }
+}
+;
+
+fileInput.addEventListener('change', function(e) {
+  let file = e.target.files[0];
+  let reader = new FileReader();
+  reader.onload = function(e) {
+    let data = new Uint8Array(e.target.result);
+    let hex = Array.prototype.map.call(data, x => ('00' + x.toString(16)).slice(-2));
+    let table = $('<table/>');
+
+    function processChunk(start) {
+      let end = Math.min(start + 1000, hex.length);
+      for(let i=start; i<end; i+=16) {
+        let row = $('<tr/>');
+        for(let j=0; j<16 && i+j<hex.length; j++) {
+          let cell = $('<td/>').text(hex[i+j]).data('byteIndex', i+j);
+          let info = findByteInfo(i+j);
+          if (info) {
+            cell.addClass('highlight').attr('data-info', info.information);
+          }
+          row.append(cell);
+        }
+        table.append(row);
+      }
+      $('#hexOutput').empty().append(table);
+      if (end < hex.length) {
+        setTimeout(function() { processChunk(end); }, 0);
+      }
+    }
+    processChunk(0);
+  };
+  reader.readAsArrayBuffer(file);
+});
+
+$('#hexOutput').on('mouseover', 'td', function() {
+  let info = $(this).attr('data-info');
+  if (info) {
+    $('#infoBox').text(info);
+  }
+});
+
+$('#hexOutput').on('mouseout', 'td', function() {
+  $('#infoBox').text('');
+});
+
+function findByteInfo(byteIndex) {
+  for (let sectionName in fileInfo.SQLiteDatabase) {
+    let section = fileInfo.SQLiteDatabase[sectionName];
+    if (byteIndex >= section.index && byteIndex < section.index + section.size) {
+      return section;
+    }
+  }
+  return null;
+}
+</script>
+
+</body>
+</html>
+<!-- 
+TODO: make a file check
+- make a template folder check
+- conditions parsing
+- and more... 
+This is just me messing around and saving unnecessary stuff..-->
